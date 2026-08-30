@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Will You Make The Check?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #12151F;
+    --panel: #1B2030;
+    --panel-alt: #20263A;
+    --border: #2A3044;
+    --text: #EDEFF5;
+    --text-dim: #8B92A8;
+
+    --coral: #E2574C;
+    --amber: #E8A33D;
+    --teal: #3FD6C0;
+    --impossible: #333952;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+
+  body {
+    padding: 64px 24px 96px;
+  }
+
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    line-height: 1.1;
+    margin: 0 0 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    max-width: 46ch;
+    margin: 0 0 40px;
+  }
+
+  section + section {
+    margin-top: 72px;
+    padding-top: 72px;
+    border-top: 1px solid var(--border);
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.6rem;
+    margin: 0 0 12px;
+  }
+
+  .sub-small {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    max-width: 52ch;
+    margin: 0 0 28px;
+  }
+
+  /* --- Calculator --- */
+
+  .calculator {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 28px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  input[type="number"], select, input[type="text"] {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  input[type="number"]:focus, select:focus, input[type="text"]:focus {
+    border-color: var(--amber);
+  }
+
+  select {
+    font-family: 'Inter', sans-serif;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .result {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    padding-top: 24px;
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+
+  .result-label {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .result-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 3.2rem;
+    transition: color 0.25s ease;
+  }
+
+  .result-detail {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* --- Table controls --- */
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .controls .field.wide {
+    grid-column: span 2;
+  }
+
+  @media (max-width: 640px) {
+    .calculator { grid-template-columns: 1fr; }
+    .controls { grid-template-columns: 1fr 1fr; }
+    .controls .field.wide { grid-column: span 2; }
+  }
+
+  /* --- Table --- */
+
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+  }
+
+  th, td {
+    padding: 8px 10px;
+    text-align: right;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+  }
+
+  thead th {
+    background: var(--panel-alt);
+    color: var(--text-dim);
+    font-weight: 400;
+    position: sticky;
+    top: 0;
+  }
+
+  tbody th {
+    background: var(--panel-alt);
+    color: var(--text-dim);
+    font-weight: 400;
+    text-align: left;
+    position: sticky;
+    left: 0;
+  }
+
+  .corner {
+    background: var(--panel-alt);
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 2;
+  }
+
+  td.cell {
+    color: #12151F;
+    font-weight: 600;
+  }
+
+  footer {
+    margin-top: 80px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <section>
+    <h1>Will you make the check?</h1>
+    <p class="sub">Enter your bonus and the DC to see your odds, with or without advantage.</p>
+
+    <div class="calculator">
+      <div class="field">
+        <label for="calcBonus">Your bonus</label>
+        <input type="number" id="calcBonus" value="5" step="1">
+      </div>
+      <div class="field">
+        <label for="calcDC">DC to beat</label>
+        <input type="number" id="calcDC" value="15" step="1">
+      </div>
+      <div class="field">
+        <label for="calcMode">Roll type</label>
+        <select id="calcMode">
+          <option value="normal" selected>Normal</option>
+          <option value="advantage">Advantage</option>
+          <option value="disadvantage">Disadvantage</option>
+        </select>
+      </div>
+      <div class="result">
+        <div>
+          <div class="result-label">Chance to pass</div>
+          <div class="result-detail" id="calcDetail">need 10 or higher</div>
+        </div>
+        <div class="result-value" id="calcResult">55%</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>See the full spread</h2>
+    <p class="sub-small">Compare a range of bonuses against a set of DCs at a glance. Edit the ranges below — the table updates as you type.</p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="bonusMin">Bonus from</label>
+        <input type="number" id="bonusMin" value="0" step="1">
+      </div>
+      <div class="field">
+        <label for="bonusMax">Bonus to</label>
+        <input type="number" id="bonusMax" value="15" step="1">
+      </div>
+      <div class="field wide">
+        <label for="dcList">DCs (comma separated)</label>
+        <input type="text" id="dcList" value="5,8,10,12,15,18,20,22,24,25,26,28,30,32,34,35">
+      </div>
+      <div class="field">
+        <label for="tableMode">Roll type</label>
+        <select id="tableMode">
+          <option value="normal" selected>Normal</option>
+          <option value="advantage">Advantage</option>
+          <option value="disadvantage">Disadvantage</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table id="table"></table>
+    </div>
+  </section>
+
+  <footer>A quick tool for the table. No dice were harmed.</footer>
+
+</main>
+
+<script>
+  function baseChance(bonus, dc) {
+    const need = dc - bonus;
+    const chance = (21 - need) / 20;
+    return Math.max(0, Math.min(1, chance));
+  }
+
+  function chanceWithMode(bonus, dc, mode) {
+    const p = baseChance(bonus, dc);
+    if (mode === 'advantage') return 1 - Math.pow(1 - p, 2);
+    if (mode === 'disadvantage') return Math.pow(p, 2);
+    return p;
+  }
+
+  function neededRoll(bonus, dc) {
+    const need = dc - bonus;
+    if (need <= 1) return 1;
+    if (need > 20) return null;
+    return need;
+  }
+
+  // Color ramp: impossible -> coral -> amber -> teal
+  const stops = [
+    [0.00, [51, 57, 82]],   // impossible slate
+    [0.02, [226, 87, 76]],  // coral
+    [0.45, [232, 163, 61]], // amber
+    [1.00, [63, 214, 192]]  // teal
+  ];
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function colorForChance(p) {
+    if (p <= 0) return stops[0][1];
+    for (let i = 0; i < stops.length - 1; i++) {
+      const [p0, c0] = stops[i];
+      const [p1, c1] = stops[i + 1];
+      if (p >= p0 && p <= p1) {
+        const t = (p - p0) / (p1 - p0 || 1);
+        return [
+          Math.round(lerp(c0[0], c1[0], t)),
+          Math.round(lerp(c0[1], c1[1], t)),
+          Math.round(lerp(c0[2], c1[2], t))
+        ];
+      }
+    }
+    return stops[stops.length - 1][1];
+  }
+
+  // --- Calculator ---
+
+  const calcBonus = document.getElementById('calcBonus');
+  const calcDC = document.getElementById('calcDC');
+  const calcMode = document.getElementById('calcMode');
+  const calcResult = document.getElementById('calcResult');
+  const calcDetail = document.getElementById('calcDetail');
+
+  let displayedPct = null;
+
+  function animateResult(target) {
+    const start = displayedPct === null ? target : displayedPct;
+    const duration = 220;
+    const startTime = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - startTime) / duration);
+      const value = Math.round(lerp(start, target, t));
+      calcResult.textContent = value + '%';
+      if (t < 1) requestAnimationFrame(frame);
+      else displayedPct = target;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function updateCalculator() {
+    const bonus = parseInt(calcBonus.value, 10) || 0;
+    const dc = parseInt(calcDC.value, 10) || 0;
+    const mode = calcMode.value;
+    const p = chanceWithMode(bonus, dc, mode);
+    const pct = Math.round(p * 100);
+
+    const [r, g, b] = colorForChance(p);
+    calcResult.style.color = `rgb(${r}, ${g}, ${b})`;
+    animateResult(pct);
+
+    const need = neededRoll(bonus, dc);
+    if (need === null) {
+      calcDetail.textContent = 'no roll is high enough';
+    } else if (mode === 'normal') {
+      calcDetail.textContent = `need ${need} or higher on the d20`;
+    } else if (mode === 'advantage') {
+      calcDetail.textContent = `need ${need}+ on either of 2 rolls`;
+    } else {
+      calcDetail.textContent = `need ${need}+ on both of 2 rolls`;
+    }
+  }
+
+  [calcBonus, calcDC, calcMode].forEach(el => el.addEventListener('input', updateCalculator));
+
+  // --- Table ---
+
+  const bonusMin = document.getElementById('bonusMin');
+  const bonusMax = document.getElementById('bonusMax');
+  const dcListInput = document.getElementById('dcList');
+  const tableMode = document.getElementById('tableMode');
+  const tableEl = document.getElementById('table');
+
+  function parseDCList() {
+    return dcListInput.value
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n));
+  }
+
+  function buildTable() {
+    const bMin = parseInt(bonusMin.value, 10);
+    const bMax = parseInt(bonusMax.value, 10);
+    const dcs = parseDCList();
+    const mode = tableMode.value;
+
+    if (isNaN(bMin) || isNaN(bMax) || bMax < bMin || dcs.length === 0) {
+      tableEl.innerHTML = '';
+      return;
+    }
+
+    let html = '<thead><tr><th class="corner">Bonus \\ DC</th>';
+    for (const dc of dcs) html += `<th>${dc}</th>`;
+    html += '</tr></thead><tbody>';
+
+    for (let bonus = bMin; bonus <= bMax; bonus++) {
+      html += `<tr><th>${bonus >= 0 ? '+' + bonus : bonus}</th>`;
+      for (const dc of dcs) {
+        const p = chanceWithMode(bonus, dc, mode);
+        const pct = Math.round(p * 100);
+        const [r, g, b] = colorForChance(p);
+        html += `<td class="cell" style="background: rgb(${r},${g},${b})">${pct}%</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    tableEl.innerHTML = html;
+  }
+
+  [bonusMin, bonusMax, dcListInput, tableMode].forEach(el => el.addEventListener('input', buildTable));
+
+  updateCalculator();
+  buildTable();
+</script>
+</body>
+</html>
