@@ -382,11 +382,13 @@
 
     const need = neededRoll(bonus, dc);
     if (need === null) {
-      calcDetail.textContent = 'no roll is high enough';
+      calcDetail.textContent = 'no roll is high enough :(';
+    } else if (need <= 1) {
+      calcDetail.textContent = 'automatic success! :)';
     } else if (mode === 'normal') {
       calcDetail.textContent = `need ${need} or higher on the d20`;
     } else if (mode === 'advantage') {
-      calcDetail.textContent = `need ${need}+ on either of 2 rolls`;
+      calcDetail.textContent = `need ${need}+ on at least one of 2 rolls`;
     } else {
       calcDetail.textContent = `need ${need}+ on both of 2 rolls`;
     }
