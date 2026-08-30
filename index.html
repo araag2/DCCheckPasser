@@ -262,7 +262,7 @@
 
   <section>
     <h2>See the full spread</h2>
-    <p class="sub-small">Compare a range of bonuses against a set of DCs at a glance. Edit the ranges below — the table updates as you type.</p>
+    <p class="sub-small">Compare a range of bonuses against a set of DCs at a glance.</p>
 
     <div class="controls">
       <div class="field">
@@ -444,6 +444,22 @@
 
   updateCalculator();
   buildTable();
+
+  function updateModeColor(select) {
+    if (select.value === 'advantage') {
+      select.style.color = 'green';
+    } else if (select.value === 'disadvantage') {
+      select.style.color = 'red';
+    } else {
+      select.style.color = '';
+    }
+  }
+
+  calcMode.addEventListener('change', () => updateModeColor(calcMode));
+  tableMode.addEventListener('change', () => updateModeColor(tableMode));
+
+  updateModeColor(calcMode);
+  updateModeColor(tableMode);
 </script>
 </body>
 </html>
