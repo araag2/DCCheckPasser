@@ -81,7 +81,7 @@
 
   .calculator {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 20px;
     background: var(--panel);
     border: 1px solid var(--border);
@@ -239,6 +239,10 @@
         <input type="number" id="calcBonus" value="5" step="1">
       </div>
       <div class="field">
+        <label for="calcDice">Additional dice</label>
+        <input type="text" id="calcDice" placeholder="e.g. 2d6">
+      </div>
+      <div class="field">
         <label for="calcDC">DC to beat</label>
         <input type="number" id="calcDC" value="15" step="1">
       </div>
@@ -278,6 +282,10 @@
         <input type="text" id="dcList" value="5,8,10,12,15,18,20,22,24,25,26,28,30,32,34,35">
       </div>
       <div class="field">
+        <label for="tableDice">Additional dice</label>
+        <input type="text" id="tableDice" placeholder="e.g. 1d4">
+      </div>
+      <div class="field">
         <label for="tableMode">Roll type</label>
         <select id="tableMode">
           <option value="normal" selected>Normal</option>
@@ -297,24 +305,91 @@
 </main>
 
 <script>
-  function baseChance(bonus, dc) {
-    const need = dc - bonus;
-    const chance = (21 - need) / 20;
-    return Math.max(0, Math.min(1, chance));
+  function parseDiceExpression(expression) {
+    const text = expression.trim().toLowerCase();
+
+    if (text === '') {
+      return { count: 0, sides: 0 };
+    }
+
+    const match = text.match(/^(\d+)d(\d+)$/);
+    if (!match) return null;
+
+    const count = parseInt(match[1], 10);
+    const sides = parseInt(match[2], 10);
+
+    if (count < 1 || sides < 2) return null;
+
+    return { count, sides };
   }
 
-  function chanceWithMode(bonus, dc, mode) {
-    const p = baseChance(bonus, dc);
-    if (mode === 'advantage') return 1 - Math.pow(1 - p, 2);
-    if (mode === 'disadvantage') return Math.pow(p, 2);
-    return p;
+  function diceDistribution(count, sides) {
+    let distribution = new Map([[0, 1]]);
+
+    for (let die = 0; die < count; die++) {
+      const next = new Map();
+
+      for (const [currentTotal, ways] of distribution) {
+        for (let face = 1; face <= sides; face++) {
+          const total = currentTotal + face;
+          next.set(total, (next.get(total) || 0) + ways);
+        }
+      }
+
+      distribution = next;
+    }
+
+    return distribution;
   }
 
-  function neededRoll(bonus, dc) {
-    const need = dc - bonus;
-    if (need <= 1) return 1;
-    if (need > 20) return null;
-    return need;
+  function d20Distribution(mode) {
+    const distribution = new Map();
+
+    if (mode === 'normal') {
+      for (let roll = 1; roll <= 20; roll++) {
+        distribution.set(roll, 1);
+      }
+
+      return { distribution, totalOutcomes: 20 };
+    }
+
+    for (let first = 1; first <= 20; first++) {
+      for (let second = 1; second <= 20; second++) {
+        const roll =
+          mode === 'advantage'
+            ? Math.max(first, second)
+            : Math.min(first, second);
+
+        distribution.set(roll, (distribution.get(roll) || 0) + 1);
+      }
+    }
+
+    return { distribution, totalOutcomes: 400 };
+  }
+
+  function chanceWithDice(bonus, dc, mode, diceExpression = '') {
+    const dice = parseDiceExpression(diceExpression);
+    if (dice === null) return null;
+
+    const {
+      distribution: d20Dist,
+      totalOutcomes: d20Outcomes
+    } = d20Distribution(mode);
+
+    const extraDist = diceDistribution(dice.count, dice.sides);
+    const extraOutcomes = dice.count === 0 ? 1 : Math.pow(dice.sides, dice.count);
+
+    let successes = 0;
+
+    for (const [d20Roll, d20Ways] of d20Dist) {
+      for (const [extraRoll, extraWays] of extraDist) {
+        if (d20Roll + bonus + extraRoll >= dc) {
+          successes += d20Ways * extraWays;
+        }
+      }
+    }
+
+    return successes / (d20Outcomes * extraOutcomes);
   }
 
   // Color ramp: impossible -> coral -> amber -> teal
@@ -347,6 +422,7 @@
   // --- Calculator ---
 
   const calcBonus = document.getElementById('calcBonus');
+  const calcDice = document.getElementById('calcDice');
   const calcDC = document.getElementById('calcDC');
   const calcMode = document.getElementById('calcMode');
   const calcResult = document.getElementById('calcResult');
@@ -373,34 +449,43 @@
     const bonus = parseInt(calcBonus.value, 10) || 0;
     const dc = parseInt(calcDC.value, 10) || 0;
     const mode = calcMode.value;
-    const p = chanceWithMode(bonus, dc, mode);
-    const pct = Math.round(p * 100);
+    const diceExpression = calcDice.value;
+    const dice = parseDiceExpression(diceExpression);
+    const p = chanceWithDice(bonus, dc, mode, diceExpression);
 
+    if (p === null) {
+      calcResult.textContent = '—';
+      calcResult.style.color = '';
+      calcDetail.textContent = 'use dice format NdX, e.g. 2d6';
+      displayedPct = null;
+      return;
+    }
+
+    const pct = Math.round(p * 100);
     const [r, g, b] = colorForChance(p);
     calcResult.style.color = `rgb(${r}, ${g}, ${b})`;
     animateResult(pct);
 
-    const need = neededRoll(bonus, dc);
-    if (need === null) {
-      calcDetail.textContent = 'no roll is high enough :(';
-    } else if (need <= 1) {
-      calcDetail.textContent = 'automatic success! :)';
-    } else if (mode === 'normal') {
-      calcDetail.textContent = `need ${need}+ on the d20`;
+    const diceText = dice.count > 0 ? ` + ${dice.count}d${dice.sides}` : '';
+    const bonusText = `${bonus >= 0 ? '+' : '-'} ${Math.abs(bonus)}`;
+
+    if (mode === 'normal') {
+      calcDetail.textContent = `d20 ${bonusText}${diceText} vs DC ${dc}`;
     } else if (mode === 'advantage') {
-      calcDetail.textContent = `need ${need}+ on at least one of 2d20's`;
+      calcDetail.textContent = `highest of 2d20 ${bonusText}${diceText} vs DC ${dc}`;
     } else {
-      calcDetail.textContent = `need ${need}+ on both 2d20's`;
+      calcDetail.textContent = `lowest of 2d20 ${bonusText}${diceText} vs DC ${dc}`;
     }
   }
 
-  [calcBonus, calcDC, calcMode].forEach(el => el.addEventListener('input', updateCalculator));
+  [calcBonus, calcDice, calcDC, calcMode].forEach(el => el.addEventListener('input', updateCalculator));
 
   // --- Table ---
 
   const bonusMin = document.getElementById('bonusMin');
   const bonusMax = document.getElementById('bonusMax');
   const dcListInput = document.getElementById('dcList');
+  const tableDice = document.getElementById('tableDice');
   const tableMode = document.getElementById('tableMode');
   const tableEl = document.getElementById('table');
 
@@ -416,8 +501,15 @@
     const bMax = parseInt(bonusMax.value, 10);
     const dcs = parseDCList();
     const mode = tableMode.value;
+    const diceExpression = tableDice.value;
 
-    if (isNaN(bMin) || isNaN(bMax) || bMax < bMin || dcs.length === 0) {
+    if (
+      isNaN(bMin) ||
+      isNaN(bMax) ||
+      bMax < bMin ||
+      dcs.length === 0 ||
+      parseDiceExpression(diceExpression) === null
+    ) {
       tableEl.innerHTML = '';
       return;
     }
@@ -429,7 +521,7 @@
     for (let bonus = bMin; bonus <= bMax; bonus++) {
       html += `<tr><th>${bonus >= 0 ? '+' + bonus : bonus}</th>`;
       for (const dc of dcs) {
-        const p = chanceWithMode(bonus, dc, mode);
+        const p = chanceWithDice(bonus, dc, mode, diceExpression);
         const pct = Math.round(p * 100);
         const [r, g, b] = colorForChance(p);
         html += `<td class="cell" style="background: rgb(${r},${g},${b})">${pct}%</td>`;
@@ -440,7 +532,7 @@
     tableEl.innerHTML = html;
   }
 
-  [bonusMin, bonusMax, dcListInput, tableMode].forEach(el => el.addEventListener('input', buildTable));
+  [bonusMin, bonusMax, dcListInput, tableDice, tableMode].forEach(el => el.addEventListener('input', buildTable));
 
   updateCalculator();
   buildTable();
