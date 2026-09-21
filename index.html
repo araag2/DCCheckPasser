@@ -37,7 +37,7 @@
   }
 
   main {
-    max-width: 880px;
+    max-width: 920px;
     margin: 0 auto;
   }
 
@@ -81,11 +81,11 @@
 
   .calculator {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
     background: var(--panel);
     border: 1px solid var(--border);
-    padding: 28px;
+    padding: 24px;
   }
 
   .field {
